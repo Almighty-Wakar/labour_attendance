@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "Labour Attendance",
+  "short_name": "LabourAtt",
+  "description": "Daily labour attendance tracker, daily wage rates, overtime hours, advance payments ledger, and automated payroll calculations.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#5C2D91",
+  "theme_color": "#5C2D91",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

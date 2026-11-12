@@ -1,0 +1,6 @@
+{
+  "name": "Labour Attendance",
+  "description": "Daily labour attendance tracker, daily wage rates, overtime hours, advance payments ledger, and Android mobile roll call.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
