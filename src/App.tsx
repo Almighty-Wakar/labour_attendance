@@ -23,7 +23,6 @@ import {
   saveAdvances, 
   loadSettings, 
   saveSettings, 
-  resetAllData,
 } from './utils/storage';
 import {
   getBackendAuthStatus,
@@ -376,39 +375,10 @@ export default function App() {
     });
   };
 
-  // Handlers for Settings & Reset
+  // Handlers for Settings
   const handleSaveSettings = (newSettings: AppSettings) => {
     setSettings(newSettings);
     saveSettings(newSettings);
-  };
-
-  const handleResetData = () => {
-    const res = resetAllData();
-    setLabourers(res.labourers);
-    setAttendance(res.attendance);
-    setAdvances(res.advances);
-    setSettings(res.settings);
-  };
-
-  const handleImportData = (data: {
-    labourers: Labour[];
-    attendance: AttendanceRecord[];
-    advances: AdvanceTransaction[];
-    settings?: AppSettings;
-  }) => {
-    setLabourers(data.labourers);
-    saveLabourers(data.labourers);
-
-    setAttendance(data.attendance);
-    saveAttendance(data.attendance);
-
-    setAdvances(data.advances);
-    saveAdvances(data.advances);
-
-    if (data.settings) {
-      setSettings(data.settings);
-      saveSettings(data.settings);
-    }
   };
 
   // Modal openers
@@ -575,11 +545,7 @@ export default function App() {
         onClose={() => setIsSettingsModalOpen(false)}
         settings={settings}
         onSaveSettings={handleSaveSettings}
-        onResetData={handleResetData}
-        onImportData={handleImportData}
         labourers={labourers}
-        attendance={attendance}
-        advances={advances}
         onOpenLoginAccess={() => setIsLoginAccessOpen(true)}
         onOpenApkStudio={() => setActiveTab('apk-studio')}
       />
