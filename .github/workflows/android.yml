@@ -19,16 +19,22 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Build Debug APK and Release AAB
-        run: ./gradlew assembleDebug bundleRelease
+      - name: Find project root and build
+        run: |
+          PROJECT_DIR=$(find . -maxdepth 3 -name "settings.gradle*" -o -name "build.gradle*" | head -n 1 | xargs dirname)
+          echo "Found project in: $PROJECT_DIR"
+          cd "$PROJECT_DIR"
+          if [ -f "./gradlew" ]; then
+            chmod +x gradlew
+            ./gradlew assembleDebug bundleRelease
+          else
+            gradle assembleDebug bundleRelease
+          fi
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: android-builds
           path: |
-            app/build/outputs/apk/debug/*.apk
-            app/build/outputs/bundle/release/*.aab
+            **/app/build/outputs/apk/debug/*.apk
+            **/app/build/outputs/bundle/release/*.aab
