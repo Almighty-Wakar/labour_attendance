@@ -1,12 +1,13 @@
 import React from 'react';
 import { ActiveTab } from '../types';
-import { 
-  Home, 
-  CreditCard, 
+import {
+  Home,
+  CreditCard,
   CheckCheck,
   Banknote,
-  Users
+  Users,
 } from 'lucide-react';
+import { triggerHaptic } from '../utils/haptics';
 
 interface AndroidBottomNavProps {
   activeTab: ActiveTab;
@@ -18,108 +19,84 @@ interface AndroidBottomNavProps {
 export const AndroidBottomNav: React.FC<AndroidBottomNavProps> = ({
   activeTab,
   setActiveTab,
-  onQuickRollCall,
   activeLabourCount,
 }) => {
+  const navItems: {
+    id: ActiveTab;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badge?: number;
+  }[] = [
+    { id: 'home', label: 'Home', icon: Home },
+    { id: 'attendance', label: 'Payments', icon: CreditCard },
+    { id: 'mark-today', label: 'Attendance', icon: CheckCheck },
+    { id: 'payroll', label: 'Wages', icon: Banknote },
+    { id: 'labourers', label: 'Labourers', icon: Users, badge: activeLabourCount },
+  ];
+
   return (
-    <footer className="shrink-0 z-40 w-full bg-white border-t border-purple-100/90 shadow-[0_-4px_20px_rgba(92,45,145,0.06)] select-none no-print overflow-visible">
-      <div className="w-full px-4 h-16 flex items-center justify-between relative">
-        {/* Tab 1: Home */}
-        <button
-          onClick={() => setActiveTab('home')}
-          className={`flex-1 flex flex-col items-center justify-center py-1 transition-colors cursor-pointer min-h-[44px] ${
-            activeTab === 'home'
-              ? 'text-[#5C2D91]'
-              : 'text-neutral-400 hover:text-neutral-700'
-          }`}
-        >
-          <Home className={`w-5 h-5 ${activeTab === 'home' ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
-          <span className={`text-[10px] mt-0.5 ${activeTab === 'home' ? 'font-bold' : 'font-medium'}`}>
-            Home
-          </span>
-          {activeTab === 'home' && (
-            <span className="w-1.5 h-1 rounded-full bg-[#5C2D91] mt-0.5" />
-          )}
-        </button>
+    <footer className="shrink-0 z-40 w-full bg-white/95 backdrop-blur-md border-t border-purple-100 shadow-[0_-4px_18px_rgba(92,45,145,0.06)] select-none no-print pb-[max(8px,env(safe-area-inset-bottom))]">
+      <nav
+        aria-label="Android Bottom Navigation"
+        className="w-full px-1 pt-1.5 pb-1 grid grid-cols-5 items-center"
+      >
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive =
+            activeTab === item.id ||
+            (item.id === 'attendance' && activeTab === 'advances');
+          const isCenterAction = item.id === 'mark-today';
 
-        {/* Tab 2: Payments & Advances */}
-        <button
-          onClick={() => setActiveTab('attendance')}
-          className={`flex-1 flex flex-col items-center justify-center py-1 transition-colors cursor-pointer min-h-[44px] ${
-            activeTab === 'attendance'
-              ? 'text-[#5C2D91]'
-              : 'text-neutral-400 hover:text-neutral-700'
-          }`}
-        >
-          <CreditCard className={`w-5 h-5 ${activeTab === 'attendance' ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
-          <span className={`text-[10px] mt-0.5 ${activeTab === 'attendance' ? 'font-bold' : 'font-medium'}`}>
-            Payments
-          </span>
-          {activeTab === 'attendance' && (
-            <span className="w-1.5 h-1 rounded-full bg-[#5C2D91] mt-0.5" />
-          )}
-        </button>
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                setActiveTab(item.id);
+              }}
+              className="flex flex-col items-center justify-center min-h-[52px] min-w-0 px-0.5 cursor-pointer group active:scale-95 transition-transform"
+            >
+              {/* Material 3 Active Pill Indicator */}
+              <span
+                className={`relative flex items-center justify-center rounded-full transition-all duration-150 ${
+                  isCenterAction
+                    ? isActive
+                      ? 'w-14 h-8 bg-[#5C2D91] text-white shadow-sm'
+                      : 'w-14 h-8 bg-[#5C2D91]/12 text-[#5C2D91] group-hover:bg-[#5C2D91]/20'
+                    : isActive
+                    ? 'w-14 h-8 bg-[#5C2D91]/14 text-[#5C2D91]'
+                    : 'w-12 h-8 text-neutral-500 group-hover:text-neutral-800'
+                }`}
+              >
+                <Icon
+                  className={`w-5 h-5 shrink-0 ${
+                    isActive ? 'stroke-[2.4]' : 'stroke-[1.9]'
+                  }`}
+                />
 
-        {/* Center Floating Action Button (Android Khalti Style) */}
-        <div className="flex-1 flex flex-col items-center justify-center relative -top-4">
-          <button
-            onClick={() => setActiveTab('mark-today')}
-            className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl ring-4 ring-white active:scale-95 transition-all group cursor-pointer ${
-              activeTab === 'mark-today'
-                ? 'bg-[#3E1A66] text-white ring-purple-300'
-                : 'bg-[#5C2D91] hover:bg-[#4E247D] text-white'
-            }`}
-            title="Attendance & Individual Labour Records"
-          >
-            <CheckCheck className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
-          </button>
-          <span className={`text-[10px] mt-1 tracking-tight ${activeTab === 'mark-today' ? 'font-black text-[#5C2D91]' : 'font-bold text-neutral-600'}`}>
-            Attendance
-          </span>
-          {activeTab === 'mark-today' && (
-            <span className="w-1.5 h-1 rounded-full bg-[#5C2D91] mt-0.5" />
-          )}
-        </div>
+                {typeof item.badge === 'number' && (
+                  <span className="absolute -top-0.5 right-1.5 px-1 min-w-[16px] h-[16px] bg-pink-600 text-white font-bold text-[9px] rounded-full flex items-center justify-center tabular-nums leading-none ring-2 ring-white">
+                    {item.badge}
+                  </span>
+                )}
+              </span>
 
-        {/* Tab 4: Wages & Payroll Cards */}
-        <button
-          onClick={() => setActiveTab('payroll')}
-          className={`flex-1 flex flex-col items-center justify-center py-1 transition-colors cursor-pointer min-h-[44px] ${
-            activeTab === 'payroll'
-              ? 'text-[#5C2D91]'
-              : 'text-neutral-400 hover:text-neutral-700'
-          }`}
-        >
-          <Banknote className={`w-5 h-5 ${activeTab === 'payroll' ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
-          <span className={`text-[10px] mt-0.5 ${activeTab === 'payroll' ? 'font-bold' : 'font-medium'}`}>
-            Wages
-          </span>
-          {activeTab === 'payroll' && (
-            <span className="w-1.5 h-1 rounded-full bg-[#5C2D91] mt-0.5" />
-          )}
-        </button>
-
-        {/* Tab 5: Labour Roster */}
-        <button
-          onClick={() => setActiveTab('labourers')}
-          className={`flex-1 flex flex-col items-center justify-center py-1 transition-colors relative cursor-pointer min-h-[44px] ${
-            activeTab === 'labourers'
-              ? 'text-[#5C2D91]'
-              : 'text-neutral-400 hover:text-neutral-700'
-          }`}
-        >
-          <Users className={`w-5 h-5 ${activeTab === 'labourers' ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
-          <span className={`text-[10px] mt-0.5 ${activeTab === 'labourers' ? 'font-bold' : 'font-medium'}`}>
-            Labourers
-          </span>
-          {activeTab === 'labourers' && (
-            <span className="w-1.5 h-1 rounded-full bg-[#5C2D91] mt-0.5" />
-          )}
-          <span className="absolute top-1 right-3 px-1 min-w-[14px] h-[14px] bg-pink-600 text-white font-bold text-[8px] rounded-full flex items-center justify-center">
-            {activeLabourCount}
-          </span>
-        </button>
-      </div>
+              <span
+                className={`text-[11px] leading-tight mt-1 truncate max-w-full ${
+                  isActive
+                    ? 'font-extrabold text-[#5C2D91]'
+                    : isCenterAction
+                    ? 'font-bold text-neutral-700'
+                    : 'font-medium text-neutral-600'
+                }`}
+              >
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
     </footer>
   );
 };

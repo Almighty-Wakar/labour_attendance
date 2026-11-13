@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Labour, AppSettings } from '../types';
 import { 
   X, 
@@ -6,16 +6,19 @@ import {
   UserCheck, 
   AlertCircle, 
   User, 
-  Phone, 
   Briefcase, 
   Coins, 
-  Clock, 
   CheckCircle2, 
   XCircle,
   FileText,
-  Building2
+  Building2,
+  Camera,
+  ImagePlus,
+  Trash2
 } from 'lucide-react';
 import { COMMON_ROLES } from '../utils/seedData';
+import { compressLabourPhoto } from '../utils/imageCompress';
+import { LabourAvatar } from './LabourAvatar';
 
 interface LabourModalProps {
   isOpen: boolean;
@@ -40,7 +43,12 @@ export const LabourModal: React.FC<LabourModalProps> = ({
   const [overtimeHourlyRate, setOvertimeHourlyRate] = useState<number>(170);
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
   const [notes, setNotes] = useState('');
+  const [photoUrl, setPhotoUrl] = useState<string | undefined>(undefined);
+  const [processingPhoto, setProcessingPhoto] = useState(false);
   const [error, setError] = useState('');
+
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const defaultSiteId = settings.activeWorksiteId !== 'all' 
@@ -56,6 +64,7 @@ export const LabourModal: React.FC<LabourModalProps> = ({
       setOvertimeHourlyRate(initialLabour.overtimeHourlyRate || Math.round(initialLabour.dailyWage / 8));
       setStatus(initialLabour.status);
       setNotes(initialLabour.notes || '');
+      setPhotoUrl(initialLabour.photoUrl);
       setError('');
     } else {
       setName('');
@@ -66,6 +75,7 @@ export const LabourModal: React.FC<LabourModalProps> = ({
       setOvertimeHourlyRate(150);
       setStatus('active');
       setNotes('');
+      setPhotoUrl(undefined);
       setError('');
     }
   }, [initialLabour, isOpen, settings]);
@@ -87,6 +97,23 @@ export const LabourModal: React.FC<LabourModalProps> = ({
     const next = Math.max(100, dailyWage + delta);
     setDailyWage(next);
     setOvertimeHourlyRate(Math.round(next / 8));
+  };
+
+  const handlePhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    setProcessingPhoto(true);
+    setError('');
+    try {
+      const compressed = await compressLabourPhoto(file, 256);
+      setPhotoUrl(compressed);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not process worker photo.');
+    } finally {
+      setProcessingPhoto(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -111,6 +138,7 @@ export const LabourModal: React.FC<LabourModalProps> = ({
       joiningDate: initialLabour ? initialLabour.joiningDate : new Date().toISOString().split('T')[0],
       status,
       notes: notes.trim(),
+      photoUrl,
     };
 
     onSave(labourData);
@@ -118,37 +146,49 @@ export const LabourModal: React.FC<LabourModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/65 backdrop-blur-xs select-none animate-in fade-in duration-150">
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/65 backdrop-blur-xs select-none animate-in fade-in duration-150"
+      onClick={onClose}
+    >
       <div 
-        className="w-full max-w-lg bg-white rounded-3xl border border-purple-100 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+        className="w-full max-w-lg bg-white rounded-t-[28px] sm:rounded-3xl border border-purple-100 shadow-2xl overflow-hidden flex flex-col max-h-[90%] pb-[max(8px,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom-4 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header with Purple Gradient Branding */}
-        <div className="px-5 py-4 bg-gradient-to-r from-[#5C2D91] via-[#4D227E] to-[#381461] text-white flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center font-black text-sm text-white shrink-0">
-              {name.trim() ? name.trim().slice(0, 1).toUpperCase() : <User className="w-5 h-5" />}
+        {/* Header with Android Bottom Sheet Handle & Purple Branding */}
+        <div className="px-5 pt-3 pb-4 bg-gradient-to-r from-[#5C2D91] via-[#4D227E] to-[#381461] text-white shrink-0">
+          <div className="w-10 h-1 rounded-full bg-white/30 mx-auto mb-3 sm:hidden" />
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3 min-w-0">
+              {photoUrl ? (
+                <LabourAvatar name={name} photoUrl={photoUrl} className="w-10 h-10 rounded-2xl" />
+              ) : (
+                <div className="w-10 h-10 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center font-black text-sm text-white shrink-0">
+                  {name.trim() ? name.trim().slice(0, 1).toUpperCase() : <User className="w-5 h-5" />}
+                </div>
+              )}
+              <div className="min-w-0">
+                <h2 className="text-sm sm:text-base font-extrabold text-white leading-tight truncate">
+                  {initialLabour ? 'Edit Labour & Wage Rates' : 'Register New Labourer'}
+                </h2>
+                <p className="text-[11px] text-purple-200 mt-0.5 truncate">
+                  Set profile, daily wage rate &amp; overtime pay
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-sm sm:text-base font-extrabold text-white leading-tight">
-                {initialLabour ? 'Edit Labour & Wage Rates' : 'Register New Labourer'}
-              </h2>
-              <p className="text-[11px] text-purple-200 mt-0.5">
-                Set profile, daily wage rate, and overtime pay
-              </p>
-            </div>
-          </div>
 
-          <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-xl hover:bg-white/15 flex items-center justify-center text-white/80 hover:text-white transition-colors cursor-pointer shrink-0"
-          >
-            <X className="w-5 h-5" />
-          </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-10 h-10 rounded-xl hover:bg-white/15 flex items-center justify-center text-white/80 hover:text-white transition-colors cursor-pointer shrink-0"
+              aria-label="Close modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs font-sans">
+        <form noValidate onSubmit={handleSubmit} className="p-4 sm:p-5 overflow-y-auto overscroll-y-contain space-y-4 text-xs font-sans">
           {error && (
             <div className="flex items-center gap-2 p-3 text-xs text-rose-700 bg-rose-50 rounded-2xl border border-rose-200 font-semibold">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -161,6 +201,67 @@ export const LabourModal: React.FC<LabourModalProps> = ({
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 block px-1">
               Personal &amp; Trade Details
             </span>
+
+            {/* Worker Photo Upload / Camera */}
+            <div className="p-3 bg-purple-50/70 border border-purple-100 rounded-2xl flex items-center gap-3">
+              <LabourAvatar
+                name={name}
+                photoUrl={photoUrl}
+                className="w-14 h-14 rounded-2xl"
+                fallbackClassName="bg-[#5C2D91] text-white font-black text-lg"
+              />
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <span className="text-[11px] font-bold text-neutral-800 block">
+                  Worker Photo (Optional)
+                </span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={processingPhoto}
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="min-h-[34px] px-2.5 py-1.5 rounded-xl bg-[#5C2D91] hover:bg-[#4E247D] text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-60"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Take Photo</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={processingPhoto}
+                    onClick={() => galleryInputRef.current?.click()}
+                    className="min-h-[34px] px-2.5 py-1.5 rounded-xl bg-white border border-purple-200 hover:bg-purple-50 text-[#5C2D91] text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-60"
+                  >
+                    <ImagePlus className="w-3.5 h-3.5" />
+                    <span>{processingPhoto ? 'Processing...' : 'Gallery'}</span>
+                  </button>
+                  {photoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setPhotoUrl(undefined)}
+                      className="min-h-[34px] px-2 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                      aria-label="Remove worker photo"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Remove</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handlePhotoSelected}
+                className="hidden"
+              />
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoSelected}
+                className="hidden"
+              />
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Full Name */}
@@ -276,16 +377,13 @@ export const LabourModal: React.FC<LabourModalProps> = ({
                   <input
                     type="number"
                     min="1"
-                    step="10"
+                    step="any"
                     required
                     value={dailyWage}
                     onChange={(e) => handleWageChange(Number(e.target.value))}
                     className="w-full pl-8 pr-3 py-2 text-sm font-black bg-white border border-purple-200 rounded-xl text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5C2D91] tabular-nums font-mono shadow-2xs"
                   />
                 </div>
-                <span className="text-[10px] text-neutral-500 mt-1 block">
-                  Paid for 1 full working day attendance
-                </span>
               </div>
 
               {/* Overtime Hourly Rate */}
@@ -300,16 +398,12 @@ export const LabourModal: React.FC<LabourModalProps> = ({
                   <input
                     type="number"
                     min="0"
-                    step="5"
+                    step="any"
                     value={overtimeHourlyRate}
                     onChange={(e) => setOvertimeHourlyRate(Number(e.target.value))}
                     className="w-full pl-8 pr-3 py-2 text-sm font-black bg-white border border-purple-200 rounded-xl text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5C2D91] tabular-nums font-mono shadow-2xs"
                   />
                 </div>
-                <span className="text-[10px] text-neutral-500 mt-1 block flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-purple-600 inline" />
-                  <span>Extra rate for each overtime hour</span>
-                </span>
               </div>
             </div>
 

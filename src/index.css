@@ -7,12 +7,21 @@
     --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 
-  html, body {
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
     font-family: var(--font-sans);
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     -webkit-user-select: none;
     overscroll-behavior-y: none;
+  }
+
+  button, a, select, input {
+    touch-action: manipulation;
   }
 
   /* Allow text selection in code snippets and inputs */
@@ -22,10 +31,18 @@
   }
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* Custom smooth scrollbar for mobile / desktop */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -57,6 +74,10 @@
 
 /* Print-specific layout for printable payslips and payroll sheets */
 @media print {
+  html, body, #root {
+    height: auto !important;
+    overflow: visible !important;
+  }
   body {
     background: white !important;
     color: black !important;

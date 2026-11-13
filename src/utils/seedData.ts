@@ -57,12 +57,16 @@ export const DEFAULT_SETTINGS: AppSettings = {
   currencySymbol: 'रू',
   defaultShiftHours: 8,
   userSession: {
-    isLoggedIn: true,
-    userName: 'Er. Rajesh Shrestha',
+    isLoggedIn: false,
+    userName: 'Site Owner',
+    email: '',
     userRole: 'admin',
-    phone: '+977 98510 12345',
-    pinCode: '1234',
-    lastLogin: '2026-11-12T02:00:00.000Z',
+    phone: '',
+    rememberMe: true,
+    requireLoginOnLaunch: true,
+    lockOnBackground: false,
+    biometricThumbEnabled: true,
+    biometricEyeEnabled: true,
   },
 };
 

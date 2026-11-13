@@ -173,6 +173,28 @@ export function saveAdvances(data: AdvanceTransaction[]) {
   }
 }
 
+const SESSION_UNLOCK_KEY = 'labour_app_session_unlocked_v1';
+
+export function isSessionUnlocked(): boolean {
+  try {
+    return sessionStorage.getItem(SESSION_UNLOCK_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function setSessionUnlocked(unlocked: boolean) {
+  try {
+    if (unlocked) {
+      sessionStorage.setItem(SESSION_UNLOCK_KEY, 'true');
+    } else {
+      sessionStorage.removeItem(SESSION_UNLOCK_KEY);
+    }
+  } catch {
+    // Ignore storage errors in restricted environments
+  }
+}
+
 export function loadSettings(): AppSettings {
   try {
     const data = localStorage.getItem(KEYS.SETTINGS);
@@ -186,7 +208,10 @@ export function loadSettings(): AppSettings {
             ? parsed.worksites
             : DEFAULT_SETTINGS.worksites,
           activeWorksiteId: parsed.activeWorksiteId || DEFAULT_SETTINGS.activeWorksiteId,
-          userSession: parsed.userSession || DEFAULT_SETTINGS.userSession,
+          userSession: {
+            ...DEFAULT_SETTINGS.userSession!,
+            ...(parsed.userSession || {}),
+          },
         };
       }
     }

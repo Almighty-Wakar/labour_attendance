@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Labour, AttendanceRecord, AttendanceStatus, AppSettings } from '../types';
 import { formatCurrency, toDateStr } from '../utils/calculations';
 import { triggerHaptic } from '../utils/haptics';
+import { LabourAvatar } from './LabourAvatar';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -413,9 +414,7 @@ export const DailyAttendanceView: React.FC<DailyAttendanceViewProps> = ({
                 {/* Block 1: Worker Identity Row */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#5C2D91] to-[#7B3FB7] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-2xs">
-                      {labour.name.slice(0, 1).toUpperCase()}
-                    </div>
+                    <LabourAvatar name={labour.name} photoUrl={labour.photoUrl} className="w-10 h-10 rounded-2xl" />
                     <div className="min-w-0">
                       <h4 className="text-sm font-bold text-neutral-900 truncate leading-snug">
                         {labour.name}

@@ -23,8 +23,13 @@ import {
   saveAdvances, 
   loadSettings, 
   saveSettings, 
-  resetAllData 
+  resetAllData,
 } from './utils/storage';
+import {
+  getBackendAuthStatus,
+  logoutBackendSession,
+  mapBackendUserToSession,
+} from './utils/authApi';
 import { toDateStr } from './utils/calculations';
 import { AndroidHeader } from './components/AndroidHeader';
 import { AndroidBottomNav } from './components/AndroidBottomNav';
@@ -42,6 +47,7 @@ import { PayslipModal } from './components/PayslipModal';
 import { SettingsModal } from './components/SettingsModal';
 import { WorksiteSwitcherModal } from './components/WorksiteSwitcherModal';
 import { LoginAccessModal } from './components/LoginAccessModal';
+import { LoginLockScreen } from './components/LoginLockScreen';
 import { OfflineIndicator } from './components/OfflineIndicator';
 
 import { INITIAL_LABOURERS, DEFAULT_SETTINGS } from './utils/seedData';
@@ -97,13 +103,79 @@ export default function App() {
   const [isWorksiteSwitcherOpen, setIsWorksiteSwitcherOpen] = useState(false);
   const [isLoginAccessOpen, setIsLoginAccessOpen] = useState(false);
 
-  // Initial load
+  const [authReady, setAuthReady] = useState<boolean>(false);
+  const [hasBackendAccount, setHasBackendAccount] = useState<boolean | undefined>(undefined);
+  const [isAppUnlocked, setIsAppUnlocked] = useState<boolean>(false);
+
+  // Initial load + backend single-owner session check
   useEffect(() => {
     setLabourers(loadLabourers());
     setAttendance(loadAttendance());
     setAdvances(loadAdvances());
     setSettings(loadSettings());
+
+    let mounted = true;
+    (async () => {
+      try {
+        const status = await getBackendAuthStatus();
+        if (!mounted) return;
+        setHasBackendAccount(status.hasAccount);
+        if (status.authenticated && status.user) {
+          const syncedSession = mapBackendUserToSession(status.user);
+          setSettings((prev) => {
+            const next = { ...prev, userSession: syncedSession };
+            saveSettings(next);
+            return next;
+          });
+          setIsAppUnlocked(true);
+        } else {
+          setIsAppUnlocked(false);
+        }
+      } catch {
+        if (mounted) setIsAppUnlocked(false);
+      } finally {
+        if (mounted) setAuthReady(true);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
+
+  // Optional auto-lock when app goes to background
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && settings.userSession?.lockOnBackground && isAppUnlocked) {
+        void logoutBackendSession();
+        setIsAppUnlocked(false);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [settings.userSession?.lockOnBackground, isAppUnlocked]);
+
+  const handleUnlockApp = (updatedSession?: UserSession) => {
+    if (updatedSession) {
+      setSettings((prev) => {
+        const next = { ...prev, userSession: updatedSession };
+        saveSettings(next);
+        return next;
+      });
+    }
+    setHasBackendAccount(true);
+    setIsAppUnlocked(true);
+  };
+
+  const handleLockNow = () => {
+    void logoutBackendSession();
+    setIsAppUnlocked(false);
+  };
+
+  const handleOwnerReset = () => {
+    setHasBackendAccount(false);
+    setIsAppUnlocked(false);
+  };
 
   // Multi-worksite filtering
   const isAllWorksites = settings.activeWorksiteId === 'all';
@@ -363,20 +435,31 @@ export default function App() {
 
   const activeWorkersCount = displayedLabourers.filter((l) => l.status === 'active').length;
 
+  if (!authReady || !isAppUnlocked) {
+    return (
+      <LoginLockScreen
+        settings={settings}
+        onUnlock={handleUnlockApp}
+        initialHasAccount={hasBackendAccount}
+      />
+    );
+  }
+
   return (
-    <div className="h-screen h-[100dvh] w-full bg-[#EAEBF2] text-neutral-900 flex justify-center font-sans transition-colors antialiased select-none overflow-hidden">
+    <div className="fixed inset-0 w-full bg-[#EAEBF2] text-neutral-900 flex justify-center font-sans transition-colors antialiased select-none overflow-hidden">
       {/* Main Mobile Screen Container */}
-      <div className="w-full max-w-md h-full flex flex-col bg-[#F3F4F8] shadow-2xl relative overflow-hidden">
+      <div className="w-full max-w-md h-full min-h-0 flex flex-col bg-[#F3F4F8] shadow-2xl relative overflow-hidden">
         {/* Fixed Top App Header */}
         <AndroidHeader
           settings={settings}
           onOpenSettings={() => setIsSettingsModalOpen(true)}
           onOpenWorksiteSwitcher={() => setIsWorksiteSwitcherOpen(true)}
           onOpenLoginAccess={() => setIsLoginAccessOpen(true)}
+          onLockNow={handleLockNow}
         />
 
         {/* Scrollable Inbetween Content Area */}
-        <main className="flex-1 w-full overflow-y-auto px-3 py-3 pb-6 overscroll-contain">
+        <main className="flex-1 min-h-0 w-full overflow-y-auto px-3 py-3 pb-4 overscroll-y-contain touch-scroll">
           {activeTab === 'home' && (
             <HomeDashboardView
               labourers={displayedLabourers}
@@ -387,6 +470,7 @@ export default function App() {
               onOpenAddLabour={handleOpenAddLabour}
               onOpenAdvanceModal={handleOpenAdvanceModal}
               onOpenSettings={() => setIsSettingsModalOpen(true)}
+              onOpenWorksiteSwitcher={() => setIsWorksiteSwitcherOpen(true)}
               onQuickMarkAll={handleQuickMarkAll}
             />
           )}
@@ -513,6 +597,8 @@ export default function App() {
         onClose={() => setIsLoginAccessOpen(false)}
         settings={settings}
         onUpdateSession={handleUpdateUserSession}
+        onLockNow={handleLockNow}
+        onOwnerReset={handleOwnerReset}
       />
 
       {/* Offline Connectivity Notification */}

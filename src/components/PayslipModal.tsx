@@ -1,6 +1,7 @@
 import React from 'react';
 import { LabourWageSummary, AppSettings } from '../types';
 import { X, Printer } from 'lucide-react';
+import { LabourAvatar } from './LabourAvatar';
 
 interface PayslipModalProps {
   isOpen: boolean;
@@ -26,36 +27,45 @@ export const PayslipModal: React.FC<PayslipModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-3 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+      onClick={onClose}
+    >
       <div 
-        className="w-full max-w-md max-h-[92vh] flex flex-col bg-white rounded-3xl shadow-2xl overflow-hidden border border-neutral-200"
+        className="w-full max-w-md max-h-[90%] flex flex-col bg-white rounded-t-[28px] sm:rounded-3xl shadow-2xl overflow-hidden border border-neutral-200 pb-[max(8px,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom-4 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top bar (Hidden on print) */}
-        <div className="px-4 py-3 bg-[#5C2D91] text-white flex items-center justify-between no-print">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold tracking-tight">Worker Slip / रसिद</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handlePrint}
-              className="p-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-colors cursor-pointer flex items-center gap-1 text-xs font-semibold px-2.5"
-              title="Print Slip"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Print</span>
-            </button>
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-xl hover:bg-white/20 text-white/80 hover:text-white transition-colors cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
+        <div className="px-4 pt-2.5 pb-3 bg-[#5C2D91] text-white no-print shrink-0">
+          <div className="w-10 h-1 rounded-full bg-white/30 mx-auto mb-2.5 sm:hidden" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold tracking-tight">Worker Slip / रसिद</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="min-h-[38px] px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-colors cursor-pointer flex items-center gap-1 text-xs font-semibold"
+                title="Print Slip"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print</span>
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-9 h-9 rounded-xl hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Close slip"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Scrollable Printable Payslip Content */}
-        <div className="p-4 overflow-y-auto space-y-4 text-xs font-sans print:p-6 print:m-0 print:text-black">
+        <div className="p-4 overflow-y-auto overscroll-y-contain space-y-4 text-xs font-sans print:p-6 print:m-0 print:text-black">
           {/* Voucher Header */}
           <div className="text-center border-b pb-3 border-neutral-200">
             <h2 className="text-base font-black text-neutral-900 tracking-tight">
@@ -72,9 +82,12 @@ export const PayslipModal: React.FC<PayslipModalProps> = ({
           {/* Worker Identity (NO TAG NUMBER) */}
           <div className="bg-purple-50/60 p-3 rounded-2xl border border-purple-100 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-[#5C2D91] text-white font-black text-base flex items-center justify-center shrink-0">
-                {labour.name.slice(0, 1).toUpperCase()}
-              </div>
+              <LabourAvatar
+                name={labour.name}
+                photoUrl={labour.photoUrl}
+                className="w-10 h-10 rounded-xl"
+                fallbackClassName="bg-[#5C2D91] text-white font-black text-base"
+              />
               <div>
                 <h3 className="font-bold text-sm text-neutral-900 leading-tight">
                   {labour.name}

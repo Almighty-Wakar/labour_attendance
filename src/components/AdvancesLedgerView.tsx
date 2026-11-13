@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Labour, AdvanceTransaction, AppSettings } from '../types';
 import { formatCurrency } from '../utils/calculations';
+import { LabourAvatar } from './LabourAvatar';
 import { 
   CreditCard, 
   Plus, 
@@ -31,6 +32,7 @@ export const AdvancesLedgerView: React.FC<AdvancesLedgerViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLabourId, setSelectedLabourId] = useState('all');
   const [selectedType, setSelectedType] = useState<string>('all');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const labourMap = useMemo(() => {
     const map = new Map<string, Labour>();
@@ -210,9 +212,7 @@ export const AdvancesLedgerView: React.FC<AdvancesLedgerViewProps> = ({
                 {/* Top Row: Worker Avatar + Name + Amount */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#5C2D91] to-[#7B3FB7] text-white font-black text-sm flex items-center justify-center shrink-0 shadow-2xs">
-                      {labour?.name ? labour.name.slice(0, 1).toUpperCase() : 'W'}
-                    </div>
+                    <LabourAvatar name={labour?.name} photoUrl={labour?.photoUrl} className="w-10 h-10 rounded-2xl" />
                     <div className="min-w-0">
                       <h4 className="text-sm font-bold text-neutral-900 leading-snug truncate">
                         {labour?.name || 'Worker'}
@@ -280,17 +280,36 @@ export const AdvancesLedgerView: React.FC<AdvancesLedgerViewProps> = ({
                     )}
                   </div>
 
-                  <button
-                    onClick={() => {
-                      if (window.confirm(`Delete this ${tx.type} record of ${settings.currencySymbol}${tx.amount}?`)) {
-                        onDeleteTransaction(tx.id);
-                      }
-                    }}
-                    className="p-1.5 text-neutral-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-                    title="Delete record"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {confirmDeleteId === tx.id ? (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="min-h-[34px] px-2.5 py-1 rounded-lg bg-neutral-100 text-neutral-700 font-bold text-[11px] cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onDeleteTransaction(tx.id);
+                          setConfirmDeleteId(null);
+                        }}
+                        className="min-h-[34px] px-2.5 py-1 rounded-lg bg-rose-600 text-white font-bold text-[11px] cursor-pointer"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteId(tx.id)}
+                      className="min-h-[36px] min-w-[36px] flex items-center justify-center text-neutral-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                      title="Delete record"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             );

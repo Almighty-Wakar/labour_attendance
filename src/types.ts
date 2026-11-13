@@ -18,10 +18,18 @@ export interface Worksite {
 export interface UserSession {
   isLoggedIn: boolean;
   userName: string;
+  email?: string;
   userRole: 'admin' | 'supervisor' | 'accountant' | 'viewer';
   phone?: string;
   pinCode?: string;
   lastLogin?: string;
+  rememberMe?: boolean;
+  requireLoginOnLaunch?: boolean;
+  lockOnBackground?: boolean;
+  biometricThumbEnabled?: boolean;
+  biometricEyeEnabled?: boolean;
+  hasPassword?: boolean;
+  webAuthnCredentialId?: string;
 }
 
 export interface Labour {
@@ -36,6 +44,7 @@ export interface Labour {
   worksiteId?: string;
   notes?: string;
   workerCode?: string;
+  photoUrl?: string;
 }
 
 export interface AttendanceRecord {

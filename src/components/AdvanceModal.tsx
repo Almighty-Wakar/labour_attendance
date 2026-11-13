@@ -86,37 +86,45 @@ export const AdvanceModal: React.FC<AdvanceModalProps> = ({
   const selectedLabour = labourers.find((l) => l.id === labourId);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/65 backdrop-blur-xs select-none animate-in fade-in duration-150">
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/65 backdrop-blur-xs select-none animate-in fade-in duration-150"
+      onClick={onClose}
+    >
       <div 
-        className="w-full max-w-md bg-white rounded-3xl border border-purple-100 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+        className="w-full max-w-md bg-white rounded-t-[28px] sm:rounded-3xl border border-purple-100 shadow-2xl overflow-hidden flex flex-col max-h-[90%] pb-[max(8px,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom-4 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="px-5 py-4 bg-gradient-to-r from-[#5C2D91] via-[#4D227E] to-[#381461] text-white flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center text-white shrink-0">
-              <CreditCard className="w-5 h-5" />
+        {/* Header with Android Drag Handle */}
+        <div className="px-5 pt-3 pb-4 bg-gradient-to-r from-[#5C2D91] via-[#4D227E] to-[#381461] text-white shrink-0">
+          <div className="w-10 h-1 rounded-full bg-white/30 mx-auto mb-3 sm:hidden" />
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center text-white shrink-0">
+                <CreditCard className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-sm sm:text-base font-extrabold text-white leading-tight truncate">
+                  Record Advance or Loan
+                </h2>
+                <p className="text-[11px] text-purple-200 mt-0.5 truncate">
+                  Automatically deducted from worker wage payout
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-sm sm:text-base font-extrabold text-white leading-tight">
-                Record Advance or Loan
-              </h2>
-              <p className="text-[11px] text-purple-200 mt-0.5">
-                Automatically deducted from total worker wage payout
-              </p>
-            </div>
-          </div>
 
-          <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-xl hover:bg-white/15 flex items-center justify-center text-white/80 hover:text-white transition-colors cursor-pointer shrink-0"
-          >
-            <X className="w-5 h-5" />
-          </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-10 h-10 rounded-xl hover:bg-white/15 flex items-center justify-center text-white/80 hover:text-white transition-colors cursor-pointer shrink-0"
+              aria-label="Close modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-5 overflow-y-auto space-y-3.5 text-xs font-sans">
+        <form noValidate onSubmit={handleSubmit} className="p-4 sm:p-5 overflow-y-auto overscroll-y-contain space-y-3.5 text-xs font-sans">
           {error && (
             <div className="flex items-center gap-2 p-3 text-xs text-rose-700 bg-rose-50 rounded-2xl border border-rose-200 font-semibold">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -227,7 +235,7 @@ export const AdvanceModal: React.FC<AdvanceModalProps> = ({
               <input
                 type="number"
                 min="1"
-                step="50"
+                step="any"
                 required
                 value={amount}
                 onChange={(e) => setAmount(Number(e.target.value))}
