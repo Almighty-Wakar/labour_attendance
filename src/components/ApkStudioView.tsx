@@ -445,7 +445,7 @@ export const ApkStudioView: React.FC<ApkStudioViewProps> = ({ onBackToHome }) =>
           <div className="flex items-center gap-2">
             <Terminal className="w-4 h-4 text-[#5C2D91]" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-900">
-              Capacitor CLI (Using Included capacitor.config.ts)
+              Capacitor CLI (Using Included capacitor.config.json)
             </h3>
           </div>
           <p className="text-xs text-neutral-600 leading-relaxed">

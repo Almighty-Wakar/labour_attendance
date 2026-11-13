@@ -95,7 +95,7 @@ npx cap open android
 ├── .github/
 │   └── workflows/
 │       └── build-android-apk.yml     # Cloud APK & .aab builder + Release publisher
-├── capacitor.config.ts               # Capacitor config (com.apex.labourattendance)
+├── capacitor.config.json             # Capacitor config (com.apex.labourattendance)
 ├── server.ts                         # Express API (Single-Owner Auth + Android dist bundle)
 ├── vite.config.ts                    # Vite build config (relative ./ base for Android assets)
 ├── public/

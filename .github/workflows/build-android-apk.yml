@@ -22,23 +22,24 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Setup Java 17
+      - name: Setup Java 21 (Required by Capacitor 8 / AGP)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Install dependencies & build web bundle
         run: |
-          npm install
+          npm install --legacy-peer-deps
           npm run build
 
       - name: Generate Capacitor Android project
         run: |
-          npm install --no-save @capacitor/core @capacitor/cli @capacitor/android
+          npm install --legacy-peer-deps @capacitor/core @capacitor/cli @capacitor/android
+          rm -rf android
           npx cap add android
           npx cap sync android
 
@@ -46,7 +47,7 @@ jobs:
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug bundleRelease
+          ./gradlew assembleDebug bundleRelease --no-daemon
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
