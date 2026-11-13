@@ -17,6 +17,7 @@ import {
   Banknote,
   CheckCheck,
   Building2,
+  Smartphone,
 } from 'lucide-react';
 
 interface HomeDashboardViewProps {
@@ -286,6 +287,31 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({
         <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-white shrink-0">
           <ChevronRight className="w-4 h-4" />
         </div>
+      </button>
+
+      {/* Android Studio APK / AAB Export Card */}
+      <button
+        type="button"
+        onClick={() => {
+          triggerHaptic();
+          setActiveTab('apk-studio');
+        }}
+        className="w-full bg-white hover:bg-purple-50/40 p-3.5 rounded-3xl border border-purple-100 shadow-2xs flex items-center justify-between text-left transition-transform active:scale-[0.99] cursor-pointer min-h-[60px]"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-[#5C2D91] shrink-0">
+            <Smartphone className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <h4 className="text-xs font-extrabold text-neutral-900 leading-tight truncate">
+              Android Studio APK &amp; Bundle (.aab)
+            </h4>
+            <p className="text-[11px] text-neutral-500 mt-0.5 truncate">
+              Download ready-to-compile Gradle project ZIP
+            </p>
+          </div>
+        </div>
+        <ChevronRight className="w-4 h-4 text-[#5C2D91] shrink-0" />
       </button>
 
       {/* 5. Active Labourers & Daily Rates */}

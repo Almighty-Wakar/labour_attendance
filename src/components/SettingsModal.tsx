@@ -16,7 +16,8 @@ import {
   Sliders, 
   Database, 
   Briefcase,
-  ChevronRight
+  ChevronRight,
+  Smartphone
 } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -35,6 +36,7 @@ interface SettingsModalProps {
   attendance: AttendanceRecord[];
   advances: AdvanceTransaction[];
   onOpenLoginAccess?: () => void;
+  onOpenApkStudio?: () => void;
 }
 
 const CURRENCIES = [
@@ -60,6 +62,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   attendance,
   advances,
   onOpenLoginAccess,
+  onOpenApkStudio,
 }) => {
   const [activeTab, setActiveTab] = useState<'worksites' | 'general' | 'access' | 'backup'>('worksites');
   const [formData, setFormData] = useState<AppSettings>({ ...settings });
@@ -616,6 +619,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   />
                 </label>
               </div>
+
+              {onOpenApkStudio && (
+                <div className="p-3.5 bg-gradient-to-br from-purple-50 to-white rounded-2xl border border-purple-200 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="w-4 h-4 text-[#5C2D91]" />
+                    <span className="text-xs font-bold text-[#5C2D91]">
+                      Android Studio APK &amp; App Bundle (.aab)
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-neutral-600">
+                    Download the ready-to-build Gradle &amp; Kotlin Android Studio project ZIP for APK or Play Store .aab bundles.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenApkStudio();
+                    }}
+                    className="w-full min-h-[44px] py-2 text-xs font-bold text-white bg-[#5C2D91] hover:bg-[#4E247D] rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Smartphone className="w-4 h-4" />
+                    <span>Open Android Studio Builder</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
 
               <div className="pt-2">
                 {confirmReset ? (

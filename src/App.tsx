@@ -581,6 +581,7 @@ export default function App() {
         attendance={attendance}
         advances={advances}
         onOpenLoginAccess={() => setIsLoginAccessOpen(true)}
+        onOpenApkStudio={() => setActiveTab('apk-studio')}
       />
 
       <WorksiteSwitcherModal

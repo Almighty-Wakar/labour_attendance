@@ -664,6 +664,43 @@ async function startServer() {
     res.json({ ok: true });
   });
 
+  // 8. Provide compiled dist/ web bundle files for offline Android Studio APK/AAB zip packaging
+  app.get('/api/android-dist-files', (_req: Request, res: Response) => {
+    const distDir = path.join(process.cwd(), 'dist');
+    if (!fs.existsSync(distDir)) {
+      res.json({ available: false, files: [] });
+      return;
+    }
+
+    const collected: Array<{ path: string; base64: string }> = [];
+    const walkDir = (currentDir: string, relPrefix: string) => {
+      const entries = fs.readdirSync(currentDir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(currentDir, entry.name);
+        const relPath = relPrefix ? `${relPrefix}/${entry.name}` : entry.name;
+        if (relPath === 'assets/aistudio') {
+          continue;
+        }
+        if (entry.isDirectory()) {
+          walkDir(fullPath, relPath);
+        } else if (entry.isFile()) {
+          const content = fs.readFileSync(fullPath);
+          collected.push({
+            path: relPath,
+            base64: content.toString('base64'),
+          });
+        }
+      }
+    };
+
+    try {
+      walkDir(distDir, '');
+      res.json({ available: collected.length > 0, files: collected });
+    } catch {
+      res.json({ available: false, files: [] });
+    }
+  });
+
   // Vite dev middleware (only when not production and Vite is installed) or production static build
   const forceStatic = process.env.NODE_ENV === 'production' || Boolean(process.env.K_SERVICE);
   let mountedVite = false;

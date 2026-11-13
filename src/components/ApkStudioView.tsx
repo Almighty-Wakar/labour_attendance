@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import JSZip from 'jszip';
 import {
   Smartphone,
   Copy,
@@ -7,11 +8,15 @@ import {
   Terminal,
   FileCode,
   Layers,
-  Shield,
-  FolderGit2,
-  CheckCircle2,
   Settings2,
+  ArrowLeft,
+  PackageCheck,
+  AlertCircle,
 } from 'lucide-react';
+import {
+  generateAndroidProjectFiles,
+  renderLauncherIconPngBase64,
+} from '../utils/androidProjectTemplate';
 
 interface ApkStudioViewProps {
   onBackToHome?: () => void;
@@ -19,7 +24,9 @@ interface ApkStudioViewProps {
 
 export const ApkStudioView: React.FC<ApkStudioViewProps> = ({ onBackToHome }) => {
   const [selectedMethod, setSelectedMethod] = useState<'native' | 'capacitor'>('native');
-  const [activeCodeFile, setActiveCodeFile] = useState<'kotlin' | 'manifest' | 'layout' | 'gradle'>('kotlin');
+  const [activeCodeFile, setActiveCodeFile] = useState<
+    'kotlin' | 'manifest' | 'appGradle' | 'settingsGradle' | 'layout'
+  >('kotlin');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const currentOrigin =
@@ -27,8 +34,26 @@ export const ApkStudioView: React.FC<ApkStudioViewProps> = ({ onBackToHome }) =>
 
   const [appName, setAppName] = useState('Labour Attendance');
   const [packageName, setPackageName] = useState('com.apex.labourattendance');
+  const [versionName, setVersionName] = useState('1.0.0');
+  const [versionCode, setVersionCode] = useState<number>(1);
   const [targetUrl, setTargetUrl] = useState(currentOrigin);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
+
+  const [isBuildingZip, setIsBuildingZip] = useState(false);
+  const [zipStatus, setZipStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+
+  const projectData = useMemo(
+    () =>
+      generateAndroidProjectFiles({
+        appName,
+        packageName,
+        versionCode,
+        versionName,
+        targetUrl,
+        isOfflineMode,
+      }),
+    [appName, packageName, versionCode, versionName, targetUrl, isOfflineMode],
+  );
 
   const copyToClipboard = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -36,327 +61,254 @@ export const ApkStudioView: React.FC<ApkStudioViewProps> = ({ onBackToHome }) =>
     setTimeout(() => setCopiedKey(null), 2500);
   };
 
-  const finalLoadUrl = isOfflineMode
-    ? 'file:///android_asset/dist/index.html'
-    : targetUrl || currentOrigin;
-
-  const kotlinCode = `package ${packageName}
-
-import android.annotation.SuppressLint
-import android.graphics.Bitmap
-import android.os.Bundle
-import android.view.View
-import android.webkit.WebChromeClient
-import android.webkit.WebResourceRequest
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import android.widget.ProgressBar
-import androidx.activity.OnBackPressedCallback
-import androidx.appcompat.app.AppCompatActivity
-
-class MainActivity : AppCompatActivity() {
-
-    private lateinit var webView: WebView
-    private lateinit var progressBar: ProgressBar
-
-    // Target URL: Live URL or Local Offline Assets
-    private val appUrl = "${finalLoadUrl}"
-
-    @SuppressLint("SetJavaScriptEnabled")
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
-        webView = findViewById(R.id.webView)
-        progressBar = findViewById(R.id.progressBar)
-
-        val settings: WebSettings = webView.settings
-        settings.javaScriptEnabled = true
-        settings.domStorageEnabled = true
-        settings.databaseEnabled = true
-        settings.useWideViewPort = true
-        settings.loadWithOverviewMode = true
-        settings.setSupportZoom(false)
-        settings.builtInZoomControls = false
-        settings.displayZoomControls = false
-        settings.allowFileAccess = true
-        settings.allowContentAccess = true
-        settings.cacheMode = WebSettings.LOAD_DEFAULT
-
-        webView.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                view?.loadUrl(request?.url.toString())
-                return true
-            }
-
-            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                super.onPageStarted(view, url, favicon)
-                progressBar.visibility = View.VISIBLE
-            }
-
-            override fun onPageFinished(view: WebView?, url: String?) {
-                super.onPageFinished(view, url)
-                progressBar.visibility = View.GONE
-            }
-        }
-
-        webView.webChromeClient = object : WebChromeClient() {
-            override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                progressBar.progress = newProgress
-                if (newProgress == 100) {
-                    progressBar.visibility = View.GONE
-                }
-            }
-        }
-
-        // Hardware Back button handling
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (webView.canGoBack()) {
-                    webView.goBack()
-                } else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
-                }
-            }
-        })
-
-        webView.loadUrl(appUrl)
-    }
-}`;
-
-  const manifestCode = `<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="${packageName}">
-
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.VIBRATE" />
-
-    <application
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="${appName}"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:hardwareAccelerated="true"
-        android:usesCleartextTraffic="true"
-        android:theme="@style/Theme.AppCompat.NoActionBar">
-
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:windowSoftInputMode="adjustResize">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-    </application>
-</manifest>`;
-
-  const layoutCode = `<?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout 
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#5C2D91">
-
-    <ProgressBar
-        android:id="@+id/progressBar"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="0dp"
-        android:layout_height="4dp"
-        android:max="100"
-        android:progressTint="#FFFFFF"
-        android:visibility="gone"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <WebView
-        android:id="@+id/webView"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf="@id/progressBar"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-</androidx.constraintlayout.widget.ConstraintLayout>`;
-
-  const gradleCode = `// app/build.gradle.kts
-plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
-}
-
-android {
-    namespace = "${packageName}"
-    compileSdk = 35
-
-    defaultConfig {
-        applicationId = "${packageName}"
-        minSdk = 24
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
-}
-
-dependencies {
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("com.google.android.material:material:1.12.0")
-    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
-    implementation("androidx.webkit:webkit:1.11.0")
-}`;
-
   const getActiveCode = () => {
     switch (activeCodeFile) {
       case 'kotlin':
-        return { filename: 'MainActivity.kt', code: kotlinCode, lang: 'kotlin' };
+        return { filename: 'app/src/main/java/.../MainActivity.kt', code: projectData.kotlinCode };
       case 'manifest':
-        return { filename: 'AndroidManifest.xml', code: manifestCode, lang: 'xml' };
+        return { filename: 'app/src/main/AndroidManifest.xml', code: projectData.manifestCode };
+      case 'appGradle':
+        return { filename: 'app/build.gradle.kts', code: projectData.appGradleCode };
+      case 'settingsGradle':
+        return { filename: 'settings.gradle.kts', code: projectData.settingsGradleCode };
       case 'layout':
-        return { filename: 'activity_main.xml', code: layoutCode, lang: 'xml' };
-      case 'gradle':
-        return { filename: 'build.gradle.kts', code: gradleCode, lang: 'kotlin' };
+        return { filename: 'app/src/main/res/layout/activity_main.xml', code: projectData.layoutCode };
     }
   };
 
-  const handleDownloadAllBundle = () => {
-    const bundleText = `=== LABOUR ATTENDANCE ANDROID STUDIO BUILD BUNDLE ===
-Application Name: ${appName}
-Package Name: ${packageName}
-Target URL: ${finalLoadUrl}
-Mode: ${isOfflineMode ? 'Offline Local Assets (dist/)' : 'Live URL'}
+  const handleDownloadAndroidStudioZip = async () => {
+    if (isBuildingZip) return;
+    setIsBuildingZip(true);
+    setZipStatus(null);
 
-Steps in Android Studio:
-1. Open Android Studio -> New Project -> "Empty Views Activity"
-2. Package: ${packageName}
-3. Replace files with the code below
-4. Click 'Build' -> 'Build Bundle(s) / APK(s)' -> 'Build APK(s)'
-5. Your APK will be at app/build/outputs/apk/debug/app-debug.apk!
+    try {
+      const zip = new JSZip();
+      const rootFolderName = `${packageName.replace(/[^a-zA-Z0-9._-]/g, '_') || 'labour_attendance'}_android_studio`;
+      const root = zip.folder(rootFolderName) || zip;
 
-========================================
-FILE 1: app/src/main/AndroidManifest.xml
-========================================
-${manifestCode}
+      for (const f of projectData.files) {
+        root.file(f.path, f.content);
+      }
 
-========================================
-FILE 2: app/src/main/java/${packageName.replace(/\./g, '/')}/MainActivity.kt
-========================================
-${kotlinCode}
+      // Generate mipmap PNG launcher icons so Android Studio builds without missing resources on API 24+
+      const [iconSquareB64, iconRoundB64] = await Promise.all([
+        renderLauncherIconPngBase64(appName, false),
+        renderLauncherIconPngBase64(appName, true),
+      ]);
+      if (iconSquareB64) {
+        root.file('app/src/main/res/mipmap-xxxhdpi/ic_launcher.png', iconSquareB64, { base64: true });
+      }
+      if (iconRoundB64) {
+        root.file('app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png', iconRoundB64, {
+          base64: true,
+        });
+      }
 
-========================================
-FILE 3: app/src/main/res/layout/activity_main.xml
-========================================
-${layoutCode}
+      let bundledAssetsCount = 0;
+      if (isOfflineMode) {
+        const res = await fetch('/api/android-dist-files');
+        if (res.ok) {
+          const data = (await res.json()) as {
+            available?: boolean;
+            files?: Array<{ path: string; base64: string }>;
+          };
+          if (data.available && Array.isArray(data.files)) {
+            for (const asset of data.files) {
+              root.file(`app/src/main/assets/dist/${asset.path}`, asset.base64, { base64: true });
+              bundledAssetsCount += 1;
+            }
+          }
+        }
+      }
 
-========================================
-FILE 4: app/build.gradle.kts
-========================================
-${gradleCode}
-`;
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${rootFolderName}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
 
-    const blob = new Blob([bundleText], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `android_studio_${packageName.replace(/\./g, '_')}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+      if (isOfflineMode && bundledAssetsCount === 0) {
+        setZipStatus({
+          type: 'error',
+          msg: 'Project ZIP downloaded, but dist/ assets were not found on server. Run `npm run build` first or switch Offline Mode off to load live URL.',
+        });
+      } else {
+        setZipStatus({
+          type: 'success',
+          msg: isOfflineMode
+            ? `Android Studio project ZIP ready with ${bundledAssetsCount} offline web bundle files!`
+            : 'Android Studio project ZIP downloaded! Extract and open directly in Android Studio.',
+        });
+      }
+    } catch (err) {
+      setZipStatus({
+        type: 'error',
+        msg: err instanceof Error ? err.message : 'Failed to generate Android Studio project bundle.',
+      });
+    } finally {
+      setIsBuildingZip(false);
+    }
   };
 
   const activeCodeData = getActiveCode();
 
   return (
-    <div className="space-y-4 pb-20 select-none">
+    <div className="space-y-3.5 pb-6 select-none">
       {/* Header */}
-      <div className="bg-white border border-purple-100 rounded-2xl p-4 shadow-xs">
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 border border-purple-200 text-[#5C2D91] text-[11px] font-bold mb-1.5">
-          <Smartphone className="w-3.5 h-3.5" />
-          <span>Android Studio APK Creator</span>
+      <div className="bg-white border border-purple-100 rounded-3xl p-4 shadow-xs space-y-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 border border-purple-200 text-[#5C2D91] text-[11px] font-bold">
+            <Smartphone className="w-3.5 h-3.5" />
+            <span>Android Studio APK &amp; Bundle (.aab)</span>
+          </div>
+          {onBackToHome && (
+            <button
+              type="button"
+              onClick={onBackToHome}
+              className="min-h-[34px] px-2.5 py-1 rounded-xl bg-purple-50 hover:bg-purple-100 text-[#5C2D91] text-xs font-bold flex items-center gap-1 cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back</span>
+            </button>
+          )}
         </div>
-        <h2 className="text-base font-bold text-neutral-900">
-          Build Labour Attendance APK in Android Studio
-        </h2>
-        <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">
-          Customize package settings and copy ready-to-compile Kotlin and XML files for Android Studio.
-        </p>
+
+        <div>
+          <h2 className="text-base font-extrabold text-neutral-900">
+            Create APK &amp; AAB Bundle in Android Studio
+          </h2>
+          <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">
+            Exports a complete Gradle + Kotlin Android Studio project with Camera/Gallery support for worker photos.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleDownloadAndroidStudioZip}
+          disabled={isBuildingZip}
+          className="w-full min-h-[48px] py-3 px-4 rounded-2xl bg-[#5C2D91] hover:bg-[#4E247D] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm active:scale-[0.99] transition-all cursor-pointer disabled:opacity-60"
+        >
+          <Download className="w-4 h-4" />
+          <span>
+            {isBuildingZip
+              ? 'Generating Android Studio ZIP...'
+              : 'Download Android Studio Project (.zip)'}
+          </span>
+        </button>
+
+        {zipStatus && (
+          <div
+            className={`p-3 rounded-2xl text-xs font-semibold flex items-start gap-2 border ${
+              zipStatus.type === 'success'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                : 'bg-rose-50 border-rose-200 text-rose-700'
+            }`}
+          >
+            {zipStatus.type === 'success' ? (
+              <PackageCheck className="w-4 h-4 shrink-0 mt-0.5" />
+            ) : (
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            )}
+            <span>{zipStatus.msg}</span>
+          </div>
+        )}
       </div>
 
       {/* Package Customization Controls */}
-      <div className="p-4 bg-white border border-purple-100 rounded-2xl space-y-3 shadow-xs">
+      <div className="p-4 bg-white border border-purple-100 rounded-3xl space-y-3 shadow-xs">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Settings2 className="w-4 h-4 text-[#5C2D91]" />
-            <span className="text-xs font-bold text-neutral-900">Custom Android App Settings</span>
+            <span className="text-xs font-bold text-neutral-900">Android App Bundle Configuration</span>
           </div>
-          <span className="text-[10px] text-emerald-600 font-mono font-bold">Live Sync</span>
+          <span className="text-[11px] text-emerald-600 font-mono font-bold">Gradle 8.7</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <div>
-            <label className="text-[10px] font-semibold text-neutral-600 block mb-1">
-              App Name (Launcher label)
+            <label className="text-[11px] font-semibold text-neutral-600 block mb-1">
+              App Name (Launcher Label)
             </label>
             <input
               type="text"
               value={appName}
               onChange={(e) => setAppName(e.target.value)}
-              className="w-full bg-purple-50/40 border border-purple-100 rounded-xl px-3 py-1.5 text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5C2D91] font-medium"
+              className="w-full min-h-[40px] bg-purple-50/40 border border-purple-100 rounded-xl px-3 py-1.5 text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5C2D91] font-medium"
             />
           </div>
 
           <div>
-            <label className="text-[10px] font-semibold text-neutral-600 block mb-1">
-              Android Package ID
+            <label className="text-[11px] font-semibold text-neutral-600 block mb-1">
+              Application ID (Package)
             </label>
             <input
               type="text"
               value={packageName}
               onChange={(e) => setPackageName(e.target.value)}
-              className="w-full bg-purple-50/40 border border-purple-100 rounded-xl px-3 py-1.5 text-xs text-[#5C2D91] font-mono focus:outline-none focus:ring-2 focus:ring-[#5C2D91]"
+              className="w-full min-h-[40px] bg-purple-50/40 border border-purple-100 rounded-xl px-3 py-1.5 text-xs text-[#5C2D91] font-mono focus:outline-none focus:ring-2 focus:ring-[#5C2D91]"
+            />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-semibold text-neutral-600 block mb-1">
+              Version Name
+            </label>
+            <input
+              type="text"
+              value={versionName}
+              onChange={(e) => setVersionName(e.target.value)}
+              className="w-full min-h-[40px] bg-purple-50/40 border border-purple-100 rounded-xl px-3 py-1.5 text-xs text-neutral-900 font-mono focus:outline-none focus:ring-2 focus:ring-[#5C2D91]"
+            />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-semibold text-neutral-600 block mb-1">
+              Version Code
+            </label>
+            <input
+              type="number"
+              min="1"
+              step="any"
+              value={versionCode}
+              onChange={(e) => setVersionCode(Math.max(1, Number(e.target.value) || 1))}
+              className="w-full min-h-[40px] bg-purple-50/40 border border-purple-100 rounded-xl px-3 py-1.5 text-xs text-neutral-900 font-mono focus:outline-none focus:ring-2 focus:ring-[#5C2D91]"
             />
           </div>
         </div>
 
-        {/* Offline vs Live Mode Toggle */}
-        <div className="pt-2 border-t border-purple-50 flex items-center justify-between">
+        {!isOfflineMode && (
           <div>
-            <span className="text-xs font-semibold text-neutral-800 block">Offline Mode (Local assets)</span>
-            <span className="text-[10px] text-neutral-500">
-              Loads from <code className="text-[#5C2D91]">android_asset/dist</code> without internet
+            <label className="text-[11px] font-semibold text-neutral-600 block mb-1">
+              Live App URL (used inside WebView)
+            </label>
+            <input
+              type="url"
+              value={targetUrl}
+              onChange={(e) => setTargetUrl(e.target.value)}
+              className="w-full min-h-[40px] bg-purple-50/40 border border-purple-100 rounded-xl px-3 py-1.5 text-xs text-[#5C2D91] font-mono focus:outline-none focus:ring-2 focus:ring-[#5C2D91]"
+            />
+          </div>
+        )}
+
+        {/* Offline vs Live Mode Toggle */}
+        <div className="pt-2 border-t border-purple-50 flex items-center justify-between gap-3">
+          <div>
+            <span className="text-xs font-semibold text-neutral-800 block">
+              Include Compiled Offline Assets (dist/)
+            </span>
+            <span className="text-[11px] text-neutral-500">
+              Embeds built web UI into <code className="text-[#5C2D91]">assets/dist/</code> via WebViewAssetLoader
             </span>
           </div>
           <button
+            type="button"
             onClick={() => setIsOfflineMode(!isOfflineMode)}
-            className={`w-11 h-6 flex items-center rounded-full p-1 transition cursor-pointer ${
+            className={`w-11 h-6 flex items-center rounded-full p-1 transition cursor-pointer shrink-0 ${
               isOfflineMode ? 'bg-[#5C2D91] justify-end' : 'bg-neutral-200 justify-start'
             }`}
+            aria-label="Toggle offline bundle assets"
           >
             <div className="w-4 h-4 rounded-full bg-white shadow-sm" />
           </button>
@@ -364,123 +316,109 @@ ${gradleCode}
       </div>
 
       {/* Method Switcher Tabs */}
-      <div className="flex p-1 bg-white border border-purple-100 rounded-2xl shadow-xs">
+      <div className="flex p-1 bg-white border border-purple-100 rounded-2xl shadow-xs gap-1">
         <button
+          type="button"
           onClick={() => setSelectedMethod('native')}
-          className={`flex-1 py-2 text-xs font-semibold rounded-xl transition cursor-pointer ${
+          className={`flex-1 min-h-[40px] py-2 px-2 text-xs font-bold rounded-xl transition cursor-pointer ${
             selectedMethod === 'native'
               ? 'bg-[#5C2D91] text-white shadow-sm'
               : 'text-neutral-600 hover:text-neutral-900'
           }`}
         >
-          Method 1: Native Android Studio (Recommended)
+          Android Studio (.apk / .aab)
         </button>
         <button
+          type="button"
           onClick={() => setSelectedMethod('capacitor')}
-          className={`flex-1 py-2 text-xs font-semibold rounded-xl transition cursor-pointer ${
+          className={`flex-1 min-h-[40px] py-2 px-2 text-xs font-bold rounded-xl transition cursor-pointer ${
             selectedMethod === 'capacitor'
               ? 'bg-[#5C2D91] text-white shadow-sm'
               : 'text-neutral-600 hover:text-neutral-900'
           }`}
         >
-          Method 2: Capacitor CLI
+          Capacitor CLI
         </button>
       </div>
 
       {selectedMethod === 'native' ? (
         <>
           {/* Step Guide */}
-          <div className="p-4 bg-white border border-purple-100 rounded-2xl space-y-2.5 shadow-xs">
+          <div className="p-4 bg-white border border-purple-100 rounded-3xl space-y-2.5 shadow-xs">
             <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500 flex items-center gap-1.5">
               <Layers className="w-4 h-4 text-[#5C2D91]" />
-              <span>5 Steps to Create the APK</span>
+              <span>How to Build APK or App Bundle (.aab)</span>
             </h3>
 
             <div className="space-y-2 text-xs text-neutral-700">
               <div className="p-2.5 rounded-xl bg-purple-50/50 border border-purple-100">
-                <strong className="text-[#5C2D91] block">1. Open Android Studio:</strong>
-                New Project &rarr; Empty Views Activity &rarr; Package: <code className="font-mono">{packageName}</code>
+                <strong className="text-[#5C2D91] block">1. Download &amp; Extract ZIP:</strong>
+                Tap <strong>Download Android Studio Project (.zip)</strong> above and unzip it on your computer.
               </div>
               <div className="p-2.5 rounded-xl bg-purple-50/50 border border-purple-100">
-                <strong className="text-[#5C2D91] block">2. Copy Code:</strong>
-                Paste the 4 files below into your Android Studio project.
+                <strong className="text-[#5C2D91] block">2. Open Folder in Android Studio:</strong>
+                Click <strong>Open</strong> in Android Studio, choose the extracted folder, and let Gradle 8.7 sync.
               </div>
               <div className="p-2.5 rounded-xl bg-purple-50/50 border border-purple-100">
-                <strong className="text-[#5C2D91] block">3. URL:</strong>
-                Pointing to: <code className="font-mono text-[#5C2D91] break-all">{finalLoadUrl}</code>
-              </div>
-              <div className="p-2.5 rounded-xl bg-purple-50/50 border border-purple-100">
-                <strong className="text-[#5C2D91] block">4. Build APK:</strong>
-                Click <strong>Build &gt; Build Bundle(s) / APK(s) &gt; Build APK(s)</strong>.
+                <strong className="text-[#5C2D91] block">3. Build APK (Direct Install):</strong>
+                Menu: <strong>Build &gt; Build Bundle(s) / APK(s) &gt; Build APK(s)</strong> &rarr;{' '}
+                <code className="font-mono text-[#5C2D91]">app-debug.apk</code>
               </div>
               <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">
-                <strong className="text-emerald-800 block">5. Done!</strong>
-                Grab <code className="font-mono font-bold text-emerald-700">app/build/outputs/apk/debug/app-debug.apk</code> and install on your phone!
+                <strong className="text-emerald-800 block">4. Build Signed Bundle (.aab for Play Store):</strong>
+                Menu: <strong>Build &gt; Generate Signed Bundle / APK</strong> &rarr; select{' '}
+                <strong>Android App Bundle</strong> &rarr; <code className="font-mono font-bold text-emerald-700">app-release.aab</code>
               </div>
             </div>
           </div>
 
           {/* Interactive Code Viewer */}
-          <div className="p-4 bg-white border border-purple-100 rounded-2xl space-y-3 shadow-xs">
+          <div className="p-4 bg-white border border-purple-100 rounded-3xl space-y-3 shadow-xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FileCode className="w-4 h-4 text-[#5C2D91]" />
-                <span className="text-xs font-bold text-neutral-900">Source Files</span>
+                <span className="text-xs font-bold text-neutral-900">Included Project Files</span>
               </div>
-              <button
-                onClick={handleDownloadAllBundle}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-[#5C2D91] text-xs font-semibold transition cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Download Bundle (.txt)</span>
-              </button>
             </div>
 
             {/* File Switcher Chips */}
             <div className="flex flex-wrap gap-1 p-1 bg-purple-50/60 rounded-xl">
-              <button
-                onClick={() => setActiveCodeFile('kotlin')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
-                  activeCodeFile === 'kotlin' ? 'bg-[#5C2D91] text-white font-bold' : 'text-neutral-600 hover:text-neutral-900'
-                }`}
-              >
-                MainActivity.kt
-              </button>
-              <button
-                onClick={() => setActiveCodeFile('manifest')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
-                  activeCodeFile === 'manifest' ? 'bg-[#5C2D91] text-white font-bold' : 'text-neutral-600 hover:text-neutral-900'
-                }`}
-              >
-                AndroidManifest.xml
-              </button>
-              <button
-                onClick={() => setActiveCodeFile('layout')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
-                  activeCodeFile === 'layout' ? 'bg-[#5C2D91] text-white font-bold' : 'text-neutral-600 hover:text-neutral-900'
-                }`}
-              >
-                activity_main.xml
-              </button>
-              <button
-                onClick={() => setActiveCodeFile('gradle')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
-                  activeCodeFile === 'gradle' ? 'bg-[#5C2D91] text-white font-bold' : 'text-neutral-600 hover:text-neutral-900'
-                }`}
-              >
-                build.gradle.kts
-              </button>
+              {[
+                { id: 'kotlin', label: 'MainActivity.kt' },
+                { id: 'manifest', label: 'AndroidManifest.xml' },
+                { id: 'appGradle', label: 'app/build.gradle.kts' },
+                { id: 'settingsGradle', label: 'settings.gradle.kts' },
+                { id: 'layout', label: 'activity_main.xml' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() =>
+                    setActiveCodeFile(
+                      tab.id as 'kotlin' | 'manifest' | 'appGradle' | 'settingsGradle' | 'layout',
+                    )
+                  }
+                  className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition cursor-pointer ${
+                    activeCodeFile === tab.id
+                      ? 'bg-[#5C2D91] text-white font-bold'
+                      : 'text-neutral-600 hover:text-neutral-900'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
 
             {/* Code Box */}
-            <div className="relative rounded-xl bg-neutral-950 border border-neutral-800 overflow-hidden text-neutral-100">
+            <div className="relative rounded-2xl bg-neutral-950 border border-neutral-800 overflow-hidden text-neutral-100">
               <div className="flex items-center justify-between px-3 py-2 bg-neutral-900 border-b border-neutral-800">
-                <span className="text-[11px] font-mono text-neutral-400">
+                <span className="text-[11px] font-mono text-neutral-400 truncate">
                   {activeCodeData.filename}
                 </span>
                 <button
+                  type="button"
                   onClick={() => copyToClipboard(activeCodeData.code, activeCodeFile)}
-                  className="flex items-center gap-1 px-2.5 py-1 bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 rounded-lg text-xs font-medium transition cursor-pointer"
+                  className="flex items-center gap-1 px-2.5 py-1 bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 rounded-lg text-xs font-medium transition cursor-pointer shrink-0"
                 >
                   {copiedKey === activeCodeFile ? (
                     <>
@@ -490,7 +428,7 @@ ${gradleCode}
                   ) : (
                     <>
                       <Copy className="w-3.5 h-3.5" />
-                      <span>Copy Code</span>
+                      <span>Copy</span>
                     </>
                   )}
                 </button>
@@ -503,34 +441,34 @@ ${gradleCode}
           </div>
         </>
       ) : (
-        <div className="p-4 bg-white border border-purple-100 rounded-2xl space-y-3 shadow-xs">
+        <div className="p-4 bg-white border border-purple-100 rounded-3xl space-y-3 shadow-xs">
           <div className="flex items-center gap-2">
             <Terminal className="w-4 h-4 text-[#5C2D91]" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-900">
-              Capacitor 4-Command Setup
+              Capacitor CLI (Using Included capacitor.config.ts)
             </h3>
           </div>
           <p className="text-xs text-neutral-600 leading-relaxed">
-            Run these commands in your project root to open the project directly inside Android Studio:
+            Run these commands in the downloaded repository folder to open directly in Android Studio and build an APK or App Bundle (.aab):
           </p>
 
           <div className="space-y-2">
             {[
               {
-                step: '1. Install Capacitor packages',
+                step: '1. Install Capacitor Android packages',
                 cmd: 'npm install @capacitor/core @capacitor/cli @capacitor/android',
               },
               {
-                step: '2. Initialize Capacitor',
-                cmd: `npx cap init "${appName}" "${packageName}" --web-dir dist`,
+                step: '2. Build web bundle & create Android project',
+                cmd: 'npm run build && npx cap add android && npx cap sync android',
               },
               {
-                step: '3. Build & add Android platform',
-                cmd: 'npm run build && npx cap add android',
-              },
-              {
-                step: '4. Open in Android Studio',
+                step: '3. Open in Android Studio (Build > Generate Signed Bundle / APK)',
                 cmd: 'npx cap open android',
+              },
+              {
+                step: '4. Or build Release App Bundle (.aab) via Gradle CLI',
+                cmd: 'cd android && ./gradlew bundleRelease',
               },
             ].map((item, idx) => (
               <div key={idx} className="p-2.5 bg-neutral-950 border border-neutral-800 rounded-xl space-y-1">
@@ -538,8 +476,10 @@ ${gradleCode}
                 <div className="flex items-center justify-between gap-2 bg-neutral-900 p-2 rounded-lg">
                   <code className="text-xs font-mono text-emerald-400 break-all">{item.cmd}</code>
                   <button
+                    type="button"
                     onClick={() => copyToClipboard(item.cmd, `cap-${idx}`)}
                     className="p-1 rounded text-neutral-400 hover:text-white shrink-0 cursor-pointer"
+                    aria-label="Copy command"
                   >
                     {copiedKey === `cap-${idx}` ? (
                       <Check className="w-3.5 h-3.5 text-emerald-400" />
